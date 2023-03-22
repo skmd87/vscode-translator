@@ -1,0 +1,97 @@
+{
+  "name": "translator",
+  "displayName": "translator",
+  "description": "private project",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.76.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "translator.new",
+        "title": "New Translation"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "editorHasSelection",
+          "command": "translator.new",
+          "alt": "markdown.showPreviewToSide",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Translator",
+      "properties": {
+        "translator.loginURL": {
+          "type": "string",
+          "description": "The POST URL to use for login",
+          "format": "uri",
+          "scope": "window"
+        },
+        "translator.username": {
+          "type": "string",
+          "description": "The Username/Email to use for login",
+          "scope": "window"
+        },
+        "translator.password": {
+          "type": "string",
+          "description": "The Password to use for login",
+          "scope": "window"
+        },
+        "translator.createURL": {
+          "type": "string",
+          "description": "The POST URL to use for creating a new translation",
+          "scope": "window",
+          "format": "uri"
+        },
+        "translator.fileURL": {
+          "type": "string",
+          "description": "The GET URL to use for downloading a translation",
+          "format": "uri",
+          "scope": "window"
+        },
+        "translator.tag": {
+          "type": "string",
+          "description": "The tag to use for the translation (workspace)",
+          "scope": "window"
+        },
+        "defaultLanguage": {
+          "type": "string",
+          "description": "The default language to use for the translation (workspace)",
+          "default": "en",
+          "pattern": "^[a-z]{2}$",
+          "scope": "window"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.76.0",
+    "@vscode/test-electron": "^2.2.3",
+    "eslint": "^8.34.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "axios": "^1.3.4",
+    "https": "^1.0.0"
+  }
+}
