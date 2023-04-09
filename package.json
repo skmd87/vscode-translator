@@ -9,7 +9,11 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:plaintext",
+    "onLanguage:txt",
+    "onLanguage:vue"
+  ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
@@ -28,6 +32,14 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "translator.new",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "editorHasSelection"
+      }
+    ],
     "configuration": {
       "title": "Translator",
       "properties": {
