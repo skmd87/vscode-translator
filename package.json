@@ -10,8 +10,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:plaintext",
-    "onLanguage:txt",
     "onLanguage:vue"
   ],
   "main": "./extension.js",
@@ -20,6 +18,15 @@
       {
         "command": "translator.new",
         "title": "New Translation"
+      },
+      {
+        "command": "translator.edit",
+        "title": "Edit Translation",
+        "category": "Translator",
+        "icon": {
+          "light": "./resources/light/edit.svg",
+          "dark": "./resources/dark/edit.svg"
+        }
       }
     ],
     "menus": {
@@ -43,21 +50,29 @@
     "configuration": {
       "title": "Translator",
       "properties": {
+        "translator.isLoginRequired": {
+          "type": "boolean",
+          "default": false,
+          "description": "is creating a translation requires login token"
+        },
         "translator.loginURL": {
           "type": "string",
           "description": "The POST URL to use for login",
           "format": "uri",
-          "scope": "window"
+          "scope": "window",
+          "when": "config.translator.isLoginRequired"
         },
         "translator.username": {
           "type": "string",
           "description": "The Username/Email to use for login",
-          "scope": "window"
+          "scope": "window",
+          "when": "config.translator.isLoginRequired"
         },
         "translator.password": {
           "type": "string",
           "description": "The Password to use for login",
-          "scope": "window"
+          "scope": "window",
+          "when": "config.translator.isLoginRequired"
         },
         "translator.createURL": {
           "type": "string",
@@ -65,7 +80,7 @@
           "scope": "window",
           "format": "uri"
         },
-        "translator.fileURL": {
+        "translator.translationsURL": {
           "type": "string",
           "description": "The GET URL to use for downloading a translation",
           "format": "uri",
@@ -76,14 +91,24 @@
           "description": "The tag to use for the translation (workspace)",
           "scope": "window"
         },
-        "defaultLanguage": {
+        "translator.defaultLanguage": {
           "type": "string",
           "description": "The default language to use for the translation (workspace)",
           "default": "en",
           "pattern": "^[a-z]{2}$",
           "scope": "window"
         }
-      }
+      },
+      "configurationSortOrder": [
+        "translator.translationsURL",
+        "translator.createURL",
+        "translator.defaultLanguage",
+        "translator.isLoginRequired",
+        "translator.loginURL",
+        "translator.username",
+        "translator.password",
+        "translator.tag"
+      ]
     }
   },
   "scripts": {
@@ -104,6 +129,8 @@
   },
   "dependencies": {
     "axios": "^1.3.4",
-    "https": "^1.0.0"
+    "dot-object": "^2.1.4",
+    "https": "^1.0.0",
+    "js-convert-case": "^4.2.0"
   }
 }

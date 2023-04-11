@@ -3,6 +3,9 @@
 const vscode = require('vscode');
 const axios = require('axios');
 const https = require('https');
+const dot = require('dot-object');
+const { toKebabCase } = require('js-convert-case');
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -11,53 +14,82 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
  * @param {vscode.ExtensionContext} context
  */
 
-const yellowBackground = vscode.window.createTextEditorDecorationType({
-	backgroundColor: 'yellow',
-	color: 'black'
+
+
+
+const invalidStyle = vscode.window.createTextEditorDecorationType({
+	borderColor: 'transparent',
+	borderWidth: '4px',
+	borderRadius: '4px',
+	borderSpacing: '4px',
+	borderStyle: 'solid',
+	padding: '100px 200px 300px 400px !important',
+	backgroundColor: 'rgb(191 54 12 / 20%)',
+	color: '#ffffff',
+	after: {
+		contentText: '✗',
+		color: '#DD2C00',
+		margin: '0 0 0 4px'
+	}
+
 });
 
+const translatedStyle = vscode.window.createTextEditorDecorationType({
+	borderColor: 'transparent',
+	borderWidth: '4px',
+	borderRadius: '4px',
+	borderSpacing: '4px',
+	borderStyle: 'solid',
+	backgroundColor: 'rgb(76 175 80 / 20%)',
+	color: '#ffffff',
+	after: {
+		contentText: '✓',
+		color: '#4CAF50',
+		margin: '0 0 0 4px'
+	}
+});
+
+const missingStyle = vscode.window.createTextEditorDecorationType({
+	borderColor: 'transparent',
+	borderWidth: '4px',
+	borderRadius: '4px',
+	borderSpacing: '4px',
+	borderStyle: 'solid',
+	backgroundColor: 'rgb(255  111  0 / 20%)',
+	color: '#ffffff',
+	after: {
+		contentText: '!',
+		color: '#FF6F00',
+		margin: '0 0 0 4px'
+	}
+});
+
+const api = axios.create({
+	httpsAgent: new https.Agent({
+		rejectUnauthorized: false
+	})
+});
+
+let translations = {
+	group: {
+		key: 'GROUP KEY'
+	}
+};
+
+let loginURL, createURL, translationsURL, username, token, password;
+
+const config = vscode.workspace.getConfiguration('translator');
 
 function activate(context) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "translator" is now active!');
-
-
-
-
-
-	let editor = vscode.window.activeTextEditor;
-	if (editor) {
-		highlightMatches(editor.document);
-	}
-
-	let disposable1 = vscode.workspace.onDidChangeTextDocument(event => {
-		let document = event.document;
-		highlightMatches(document);
-	});
-	let disposable2 = vscode.workspace.onDidOpenTextDocument(event => {
-		let document = event;
-		highlightMatches(document);
-	});
-	context.subscriptions.push(disposable1, disposable2);
-
-
-
-
-	const api = axios.create({
-		httpsAgent: new https.Agent({
-			rejectUnauthorized: false
-		})
-	});
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('translator.new', async function () {
+	let disposableNew = vscode.commands.registerCommand('translator.new', async function () {
 
 		// The code you place here will be executed every time your command is executed
 
-		const config = vscode.workspace.getConfiguration('translator');
+
 
 
 		var editor = vscode.window.activeTextEditor;
@@ -138,91 +170,10 @@ function activate(context) {
 		}
 
 
-		//get the url from the settings
 
-		//read data from settings
-		// if token not set then try to take from the settings, if not available then prompt for username and password
-		// if token is set then use it
-		// if token is expired then delete the token and generate one and set it in the settings
-		// if token is not expired then use it
+		await login();
 
-
-		let loginURL = config.get('loginURL');
-		let createURL = config.get('createURL');
-		let username = config.get('username');
-		let token = config.get('token');
-		let password = config.get('password');
-
-		if (!loginURL) {
-			// show input for url
-			loginURL = await vscode.window.showInputBox({
-				placeHolder: 'Enter Login URL',
-				validateInput: text => {
-					if (text.length === 0) {
-						return 'URL cannot be empty';
-					}
-					return null;
-				}
-			});
-			config.update('loginURL', loginURL, true);
-
-		}
-
-
-		if (!token) {
-			if (!username) {
-				username = await vscode.window.showInputBox({
-					placeHolder: 'Enter username',
-					validateInput: text => {
-						if (text.length === 0) {
-							return 'Username cannot be empty';
-						}
-						return null;
-					}
-				});
-			}
-			if (!password) {
-				password = await vscode.window.showInputBox({
-					placeHolder: 'Enter password',
-					validateInput: text => {
-						if (text.length === 0) {
-							return 'Password cannot be empty';
-						}
-						return null;
-					}
-				});
-			}
-			console.log('sending', {
-				email: username,
-				password
-			})
-			await api.post(loginURL,
-				{
-					email: username,
-					password
-				},
-				{
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'Entity': 'www.ingotbrokers.com',
-						'Language': 'en'
-					}
-				}
-			).then((response) => {
-				console.log(response);
-				vscode.window.showInformationMessage("Login successful");
-				console.log('token', response)
-				token = response.data.token.access_token;
-				config.update('token', response.data.token.access_token, true);
-				config.update('username', username, true);
-				config.update('password', password, true);
-			}).catch((error) => {
-				console.log(error);
-				vscode.window.showInformationMessage("Error logging in");
-			});
-
-		}
+		createURL = config.get('createURL');
 
 		if (!createURL) {
 			// show input for url
@@ -236,30 +187,66 @@ function activate(context) {
 				}
 			});
 			config.update('createURL', createURL, true);
-			return;
 		}
 
+		const options = [
+			`{{ $t('${group}.${key}') }}`,
+			`$t('${group}.${key}')`,
+			`this.$t('${group}.${key}')`,
+		]
+		await vscode.window.showQuickPick(options, {
+			placeHolder: 'Would you like to replace the text with the translation?',
+			// onDidSelectItem: item => {
+			// 	// if (item === 'Yes') {
+			// 	// 	replaceText(editor, selection, group, key);
+			// 	// }
+			// 	editor.edit(editBuilder => {
+			// 		editBuilder.replace(selection, item);
+			// 	});
+			// },
 
+		}).then(async (selected) => {
+			if (selected) {
+				// replaceText(editor, selection, group, key);
+				editor.edit(editBuilder => {
+					editBuilder.replace(selection, selected);
+				});
 
-		await api.post(createURL, body, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Content-Type': 'application/json',
-				'Accept': 'application/json',
-				'Entity': 'www.ingotbrokers.com',
-				'Language': 'en'
-			},
-		}).then((response) => {
-			console.log(response);
-			// replace the selection with the group.key
-			editor.edit(editBuilder => {
-				editBuilder.replace(selection, `${group}.${key}`);
-			});
-			vscode.window.showInformationMessage("Translation added successfully");
-		}).catch((error) => {
-			console.log(error);
-			vscode.window.showInformationMessage("Error adding translation");
+				// add to translations using dot
+				dot.str(`${group}.${key}`, translation, translations);
+
+			}
 		});
+
+		// await api.post(createURL, body, {
+		// 	headers: {
+		// 		'Authorization': `Bearer ${token}`,
+		// 		'Content-Type': 'application/json',
+		// 		'Accept': 'application/json',
+		// 		'Entity': 'www.ingotbrokers.com',
+		// 		'Language': 'en'
+		// 	},
+		// }).then(async (response) => {
+		// 	console.log(response);
+		// 	// show prompt to user to show how to replace the text
+
+		// 	await vscode.window.showQuickPick(options, {
+		// 		placeHolder: 'Would you like to replace the text with the translation?',
+		// 		onDidSelectItem: item => {
+		// 			// if (item === 'Yes') {
+		// 			// 	replaceText(editor, selection, group, key);
+		// 			// }
+		// 			editor.edit(editBuilder => {
+		// 				editBuilder.replace(selection, item);
+		// 			});
+		// 		}
+		// 	});
+
+		// 	vscode.window.showInformationMessage("Translation added successfully");
+		// }).catch((error) => {
+		// 	console.log(error);
+		// 	vscode.window.showInformationMessage("Error adding translation");
+		// });
 
 
 
@@ -268,7 +255,151 @@ function activate(context) {
 
 	});
 
-	context.subscriptions.push(disposable);
+	let disposableEdit = vscode.commands.registerCommand('translator.edit', async function () {
+	});
+
+	context.subscriptions.push(disposableNew);
+	context.subscriptions.push(disposableEdit);
+
+	getTranslations();
+
+
+	let editor = vscode.window.activeTextEditor;
+	if (editor) {
+		highlightMatches(editor.document);
+	}
+
+	let disposable1 = vscode.workspace.onDidChangeTextDocument(event => {
+		let document = event.document;
+		highlightMatches(document);
+	});
+	let disposable2 = vscode.workspace.onDidOpenTextDocument(event => {
+		let document = event;
+		highlightMatches(document);
+	});
+	context.subscriptions.push(disposable1, disposable2);
+
+
+}
+
+async function getTranslations() {
+
+	//get the url from the settings,if not available then prompt for url
+	translationsURL = config.get('translationsURL');
+
+	if (!translationsURL) {
+		// show input for url
+		translationsURL = await vscode.window.showInputBox({
+			placeHolder: 'Enter Translations URL',
+			validateInput: text => {
+				if (text.length === 0) {
+					return 'URL cannot be empty';
+				}
+				return null;
+			}
+		});
+		config.update('translationsURL', translationsURL, true);
+
+	}
+
+
+	if (translationsURL) {
+		api.get(translationsURL).then((response) => {
+			console.log(response.data)
+			//verify response.data is valid json. if ok then save it to translations
+			if (typeof response.data === 'object' && response.data !== null) {
+				translations = response.data;
+			} else {
+				vscode.window.showErrorMessage("Invalid JSON From API. Please check the translations URL then try again.");
+
+			}
+
+
+		}).catch((error) => {
+			console.log(error);
+		});
+	}
+
+
+
+}
+
+async function login() {
+
+	if (!config.get('isLoginRequired')) {
+		return true;
+	}
+
+	loginURL = config.get('loginURL');
+	username = config.get('username');
+	token = config.get('token');
+	password = config.get('password');
+
+	if (!loginURL) {
+		// show input for url
+		loginURL = await vscode.window.showInputBox({
+			placeHolder: 'Enter Login URL',
+			validateInput: text => {
+				if (text.length === 0) {
+					return 'URL cannot be empty';
+				}
+				return null;
+			}
+		});
+		config.update('loginURL', loginURL, true);
+
+	}
+	if (!token) {
+		if (!username) {
+			username = await vscode.window.showInputBox({
+				placeHolder: 'Enter username',
+				validateInput: text => {
+					if (text.length === 0) {
+						return 'Username cannot be empty';
+					}
+					return null;
+				}
+			});
+		}
+		if (!password) {
+			password = await vscode.window.showInputBox({
+				placeHolder: 'Enter password',
+				validateInput: text => {
+					if (text.length === 0) {
+						return 'Password cannot be empty';
+					}
+					return null;
+				}
+			});
+		}
+
+		await api.post(loginURL,
+			{
+				email: username,
+				password
+			},
+			{
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					'Entity': 'www.ingotbrokers.com',
+					'Language': 'en'
+				}
+			}
+		).then((response) => {
+			console.log(response);
+			vscode.window.showInformationMessage("Login successful");
+			console.log('token', response)
+			token = response.data.token.access_token;
+			config.update('token', response.data.token.access_token, true);
+			config.update('username', username, true);
+			config.update('password', password, true);
+		}).catch((error) => {
+			console.log(error);
+			vscode.window.showInformationMessage("Error logging in");
+		});
+
+	}
 }
 
 function highlightMatches(document) {
@@ -277,28 +408,54 @@ function highlightMatches(document) {
 		let regex = /\$t\(([`'"])(.*?)\1\)/g;
 		let text = document.getText();
 		let match;
-		let decorations = [];
+		let invalidDecorations = [];
+		let translatedDecoration = [];
+		let missingDecoration = [];
 		while (match = regex.exec(text)) {
 			let startPos = document.positionAt(match.index + 4); // start after "$t("
-			let endPos = document.positionAt(match.index + match[0].length - 1); // end before the closing parenthesis
+			let endPos = document.positionAt(match.index + match[0].length - 2); // end before the closing parenthesis
 			let matchedText = match[2];
+			let translation = dot.pick(matchedText, translations)
+			let isTranslated = translation ? true : false;
 			let decoration = {
 				range: new vscode.Range(startPos, endPos),
-				hoverMessage: createTooltip(matchedText),
+				hoverMessage: translation,
 				color: 'black',
 				backgroundColor: 'yellow',
 				fontWeight: 'bold',
-				fontStyle: 'italic'
+				fontStyle: 'italic',
+				borderWidth: '4px',
+				renderOptions: {
+					// Show a tooltip when hovering over the decoration
+					after: {
+						contentText: translation,
+						margin: "10px",
+						contents: [
+							new vscode.MarkdownString(`[Translate](command:translator.edit?key=${matchedText})`)
+						]
+					}
+				}
+
 			};
-			decorations.push(decoration);
+			if (isValidGroupKey(matchedText)) {
+				// console.log('valid', matchedText, isTranslated)
+				if (isTranslated) {
+					translatedDecoration.push(decoration);
+				} else {
+					missingDecoration.push(decoration);
+				}
+
+			} else {
+				invalidDecorations.push(decoration);
+			}
 		}
-		editor.setDecorations(yellowBackground, decorations);
+		editor.setDecorations(invalidStyle, invalidDecorations);
+		editor.setDecorations(translatedStyle, translatedDecoration);
+		editor.setDecorations(missingStyle, missingDecoration);
+
 	}
 }
 
-function createTooltip(originalText) {
-	return `Original Text: ${originalText}`;
-}
 
 function generateGroup() {
 	//GENERATE GROUP NAME BY TAKING THE FILE NAME AND REMOVING THE EXTENSION AND CONVERT IT TO KEBAB CASE
@@ -308,28 +465,35 @@ function generateGroup() {
 	}
 	var fileName = editor.document.fileName;
 	// remove the path (windows, mac and linux) and file extension and then convert it to kebab case
-	var group = fileName.replace(/^.*[\\\/]/, '').replace(/\.[^/.]+$/, '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+	var group = toKebabCase(fileName.replace(/^.*[\\\/]/, '').replace(/\.[^/.]+$/, ''))//.replace(/^.*[\\\/]/, '').replace(/\.[^/.]+$/, '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 	return group;
 }
 
 function generateKey(word) {
 	//GENERATE KEY BY TAKING THE SELECTED TEXT AND CONVERTING IT TO kebab CASE and trim it to 12 characters or less by ending it on the dash
-	var key = word.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+	var key = toKebabCase(word)// word.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 	if (key.length > 12) {
-		key = key.substring(0, key.lastIndexOf('-'));
+		key = key.substring(0, 30);
+		if (key.lastIndexOf('-') > 0) {
+			key = key.substring(0, key.lastIndexOf('-'));
+		}
 	}
 	return key;
 }
 
 
 function isValidGroupKey(input) {
-	return input.match(/^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)+$/)
+	// check if the input is a valid against this regex (/^[a-z0-9\-]+(\.[a-z0-9\-]+)+$/)
+	return /^[a-z0-9\-]+(\.[a-z0-9\-]+)+$/.test(input);
+
 }
 
 // This method is called when your extension is deactivated
 function deactivate() {
 
-	yellowBackground.dispose();
+	invalidStyle.dispose();
+	translatedStyle.dispose();
+	missingStyle.dispose();
 }
 
 module.exports = {
