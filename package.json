@@ -3,6 +3,11 @@
   "displayName": "translator",
   "description": "private project",
   "version": "0.0.1",
+  "publisher": "Samer Draidi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/skmd87/vscode-translator"
+  },
   "engines": {
     "vscode": "^1.76.0"
   },
@@ -96,6 +101,11 @@
           "description": "The default language to use for the translation (workspace)",
           "default": "en",
           "pattern": "^[a-z]{2}$",
+          "scope": "window"
+        },
+        "translator.extraHeaders": {
+          "type": "object",
+          "description": "Extra headers to send with the request",
           "scope": "window"
         }
       },

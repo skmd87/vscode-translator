@@ -15,7 +15,8 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
  */
 
 
-
+//get extra headers from config
+const config = vscode.workspace.getConfiguration('translator');
 
 const invalidStyle = vscode.window.createTextEditorDecorationType({
 	borderColor: 'transparent',
@@ -78,7 +79,7 @@ let translations = {
 
 let loginURL, createURL, translationsURL, username, token, password;
 
-const config = vscode.workspace.getConfiguration('translator');
+
 
 function activate(context) {
 
@@ -194,59 +195,46 @@ function activate(context) {
 			`$t('${group}.${key}')`,
 			`this.$t('${group}.${key}')`,
 		]
-		await vscode.window.showQuickPick(options, {
-			placeHolder: 'Would you like to replace the text with the translation?',
-			// onDidSelectItem: item => {
-			// 	// if (item === 'Yes') {
-			// 	// 	replaceText(editor, selection, group, key);
-			// 	// }
-			// 	editor.edit(editBuilder => {
-			// 		editBuilder.replace(selection, item);
-			// 	});
-			// },
 
-		}).then(async (selected) => {
-			if (selected) {
-				// replaceText(editor, selection, group, key);
-				editor.edit(editBuilder => {
-					editBuilder.replace(selection, selected);
-				});
 
-				// add to translations using dot
-				dot.str(`${group}.${key}`, translation, translations);
+		await api.post(createURL, body, {
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				...config.get('extraHeaders')
+			},
+		}).then(async (response) => {
+			console.log(response);
+			// show prompt to user to show how to replace the text
 
-			}
+			await vscode.window.showQuickPick(options, {
+				placeHolder: 'Would you like to replace the text with the translation?',
+				// onDidSelectItem: item => {
+				// 	// if (item === 'Yes') {
+				// 	// 	replaceText(editor, selection, group, key);
+				// 	// }
+				// 	editor.edit(editBuilder => {
+				// 		editBuilder.replace(selection, item);
+				// 	});
+				// },
+
+			}).then(async (selected) => {
+				if (selected) {
+					// replaceText(editor, selection, group, key);
+					editor.edit(editBuilder => {
+						editBuilder.replace(selection, selected);
+					});
+
+					// add to translations using dot
+					dot.str(`${group}.${key}`, translation, translations);
+
+				}
+			});
+
+			vscode.window.showInformationMessage("Translation added successfully");
+		}).catch((error) => {
+			console.log(error);
+			vscode.window.showInformationMessage("Error adding translation");
 		});
-
-		// await api.post(createURL, body, {
-		// 	headers: {
-		// 		'Authorization': `Bearer ${token}`,
-		// 		'Content-Type': 'application/json',
-		// 		'Accept': 'application/json',
-		// 		'Entity': 'www.ingotbrokers.com',
-		// 		'Language': 'en'
-		// 	},
-		// }).then(async (response) => {
-		// 	console.log(response);
-		// 	// show prompt to user to show how to replace the text
-
-		// 	await vscode.window.showQuickPick(options, {
-		// 		placeHolder: 'Would you like to replace the text with the translation?',
-		// 		onDidSelectItem: item => {
-		// 			// if (item === 'Yes') {
-		// 			// 	replaceText(editor, selection, group, key);
-		// 			// }
-		// 			editor.edit(editBuilder => {
-		// 				editBuilder.replace(selection, item);
-		// 			});
-		// 		}
-		// 	});
-
-		// 	vscode.window.showInformationMessage("Translation added successfully");
-		// }).catch((error) => {
-		// 	console.log(error);
-		// 	vscode.window.showInformationMessage("Error adding translation");
-		// });
 
 
 
@@ -316,7 +304,7 @@ async function getTranslations() {
 
 
 		}).catch((error) => {
-			console.log(error);
+			console.log('Translator Get Error', error, error.response);
 		});
 	}
 
@@ -380,23 +368,19 @@ async function login() {
 			},
 			{
 				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-					'Entity': 'www.ingotbrokers.com',
-					'Language': 'en'
+					...config.get('extraHeaders')
 				}
 			}
 		).then((response) => {
-			console.log(response);
+			console.log('Translator Login', response)
 			vscode.window.showInformationMessage("Login successful");
-			console.log('token', response)
 			token = response.data.token.access_token;
 			config.update('token', response.data.token.access_token, true);
 			config.update('username', username, true);
 			config.update('password', password, true);
 		}).catch((error) => {
-			console.log(error);
-			vscode.window.showInformationMessage("Error logging in");
+			console.log('Translator Login error', error);
+			vscode.window.showErrorMessage("Error logging in");
 		});
 
 	}
