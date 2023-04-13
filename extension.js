@@ -216,7 +216,7 @@ async function newTranslation() {
 
 
 
-	await login();
+
 
 	createURL = config.get('createURL');
 
@@ -240,48 +240,54 @@ async function newTranslation() {
 		`this.$t('${group}.${key}')`,
 	]
 
+	await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Notification,
+		title: "Adding Translation",
+		cancellable: false
+	}, async (progress, token) => {
+		try {
+			await login();
+			let response = await api.post(createURL, body, {
+				headers: {
+					'Authorization': `Bearer ${token}`,
+					...config.get('extraHeaders')
+				},
+			});
 
-	await api.post(createURL, body, {
-		headers: {
-			'Authorization': `Bearer ${token}`,
-			'Content-Type': 'application/json',
-			'Accept': 'application/json',
-			'Entity': 'www.ingotbrokers.com',
-			'Language': 'en'
-		},
-	}).then(async (response) => {
-		console.log(response);
-		// show prompt to user to show how to replace the text
+			console.log(response);
+			// show prompt to user to show how to replace the text
 
-		await vscode.window.showQuickPick(options, {
-			placeHolder: 'Would you like to replace the text with the translation?',
-			// onDidSelectItem: item => {
-			// 	// if (item === 'Yes') {
-			// 	// 	replaceText(editor, selection, group, key);
-			// 	// }
-			// 	editor.edit(editBuilder => {
-			// 		editBuilder.replace(selection, item);
-			// 	});
-			// },
+			await vscode.window.showQuickPick(options, {
+				placeHolder: 'Would you like to replace the text with the translation?',
+				// onDidSelectItem: item => {
+				// 	// if (item === 'Yes') {
+				// 	// 	replaceText(editor, selection, group, key);
+				// 	// }
+				// 	editor.edit(editBuilder => {
+				// 		editBuilder.replace(selection, item);
+				// 	});
+				// },
 
-		}).then(async (selected) => {
-			if (selected) {
-				// replaceText(editor, selection, group, key);
-				editor.edit(editBuilder => {
-					editBuilder.replace(selection, selected);
-				});
+			}).then(async (selected) => {
+				if (selected) {
+					// replaceText(editor, selection, group, key);
+					editor.edit(editBuilder => {
+						editBuilder.replace(selection, selected);
+					});
 
-				// add to translations using dot
-				dot.str(`${group}.${key}`, translation, translations);
+					// add to translations using dot
+					dot.str(`${group}.${key}`, translation, translations);
 
-			}
-		});
+				}
+			});
 
-		vscode.window.showInformationMessage("Translation added successfully");
-	}).catch((error) => {
-		console.log(error);
-		vscode.window.showInformationMessage("Error adding translation");
+			vscode.window.showInformationMessage("Translation added successfully");
+		} catch (error) {
+			console.log(error);
+			vscode.window.showErrorMessage("Error adding translation: " + error.message);
+		}
 	});
+
 
 }
 
@@ -307,31 +313,37 @@ async function getTranslations(document) {
 
 
 	if (translationsURL) {
-		await api.get(translationsURL, {
-			headers: {
-				'Authorization': `Bearer ${token}`,
-				...config.get('extraHeaders')
-			},
-		}).then((response) => {
-			console.log(response.data)
-			//verify response.data is valid json. if ok then save it to translations
-			if (typeof response.data === 'object' && response.data !== null) {
-				translations = response.data;
-				highlightMatches(document);
-				console.log('Translations', translations)
-			} else {
-				vscode.window.showErrorMessage("Invalid JSON From API. Please check the translations URL then try again.");
-
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Notification,
+			title: "Fetching Translations",
+			cancellable: false
+		}, async (progress, token) => {
+			progress.report({ message: "Loading translations..." });
+			try {
+				let response = await api.get(translationsURL, {
+					headers: {
+						'Authorization': `Bearer ${token}`,
+						...config.get('extraHeaders')
+					},
+				});
+				console.log(response.data)
+				//verify response.data is valid json. if ok then save it to translations
+				if (typeof response.data === 'object' && response.data !== null) {
+					translations = response.data;
+					highlightMatches(document);
+					console.log('Translations', translations)
+				} else {
+					vscode.window.showErrorMessage("Invalid JSON From API. Please check the translations URL then try again.");
+				}
+			} catch (error) {
+				console.log('Translator Get Error', error, error.response);
+				vscode.window.showErrorMessage("Error getting translations. Please check the translations URL then try again.", error.response);
 			}
-
-
-		}).catch((error) => {
-			console.log('Translator Get Error', error, error.response);
-			vscode.window.showErrorMessage("Error getting translations. Please check the translations URL then try again.", error.response);
 		});
 	} else {
 		vscode.window.showWarningMessage("Please enter the translations URL in the settings.");
 	}
+
 
 
 
