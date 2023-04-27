@@ -79,7 +79,7 @@ let translations = {
 
 let loginURL, createURL, translationsURL, username, token, password;
 
-
+let debugChannel = vscode.window.createOutputChannel("Translator");
 
 function activate(context) {
 
@@ -285,6 +285,7 @@ async function newTranslation() {
 		} catch (error) {
 			console.log(error);
 			vscode.window.showErrorMessage("Error adding translation: " + error.message);
+			debugChannel.appendLine(JSON.stringify(error, null, 2));
 		}
 	});
 
@@ -334,10 +335,12 @@ async function getTranslations(document) {
 					console.log('Translations', translations)
 				} else {
 					vscode.window.showErrorMessage("Invalid JSON From API. Please check the translations URL then try again.");
+
 				}
 			} catch (error) {
 				console.log('Translator Get Error', error, error.response);
 				vscode.window.showErrorMessage("Error getting translations. Please check the translations URL then try again.", error.response);
+				debugChannel.appendLine(JSON.stringify(error, null, 2));
 			}
 		});
 	} else {
@@ -418,6 +421,7 @@ async function login() {
 		}).catch((error) => {
 			console.log('Translator Login error', error);
 			vscode.window.showErrorMessage("Error logging in");
+			debugChannel.appendLine(JSON.stringify(error, null, 2));
 		});
 
 	}
