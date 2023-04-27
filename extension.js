@@ -135,7 +135,11 @@ async function newTranslation() {
 	// The code you place here will be executed every time your command is executed
 
 
+	let tags = [];
 
+	if (config.get('tags')) {
+		tags = config.get('tags').split(',').map(tag => tag.trim());
+	}
 
 	var editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -209,7 +213,7 @@ async function newTranslation() {
 
 		],
 		"type": "text",
-		"tags": [],
+		"tags": [...tags],
 		"placeholders": [],
 		"is_published": true,
 	}

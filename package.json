@@ -91,9 +91,9 @@
           "format": "uri",
           "scope": "window"
         },
-        "translator.tag": {
+        "translator.tags": {
           "type": "string",
-          "description": "The tag to use for the translation (workspace)",
+          "description": "The tag to use for the translation (comma separated ids) (workspace)",
           "scope": "window"
         },
         "translator.defaultLanguage": {
@@ -117,7 +117,7 @@
         "translator.loginURL",
         "translator.username",
         "translator.password",
-        "translator.tag"
+        "translator.tags"
       ]
     }
   },
